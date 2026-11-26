@@ -14,7 +14,11 @@
 - 이더넷 연결 상태를 실시간 감지 (와이파이가 켜져 있어도 유선 기준으로 판단)
 - 이더넷 경로로만 인터넷 연결 확인 (15초 간격)
 - 왼쪽 클릭: 상세 팝오버 (인터페이스, 링크 속도, IP, 게이트웨이, DNS)
-- 오른쪽 클릭: 로그인 시 자동 실행 / 아이콘 테두리 / 상태 미리보기(테스트) / 종료
+- 오른쪽 클릭: 로그인 시 자동 실행 / 아이콘 테두리 / 이미지 바꾸기 / 상태 미리보기(테스트) / 종료
+- **이미지 바꾸기**: 상태별 메뉴바 아이콘과 팝오버 그림을 내 이미지로 교체 (PNG·JPG·GIF·APNG·WebP)
+  - 움직이는 GIF를 넣으면 메뉴바 아이콘도 그대로 움직여요
+  - 여백 자동 자르기, 흰 배경 자동 지우기, 메뉴바 크기 자동 맞춤
+  - 저장 위치: `~/Library/Application Support/LanCat/Custom/`
 - 상태가 바뀌면 macOS 알림
 - Dock 아이콘 없이 메뉴바에만 상주, 메모리 20~30MB 수준
 
@@ -53,6 +57,9 @@ Sources/LanCat/
   AppDelegate.swift     메뉴바 아이콘·프레임 애니메이션·팝오버·알림·메뉴
   NetworkMonitor.swift  NWPathMonitor로 이더넷 감지 + 이더넷 경로로 인터넷 확인
   PopoverView.swift     SwiftUI 팝오버 + 상태별 애니메이션
+  ThemeStore.swift      기본/사용자 이미지 관리 (상태별 6칸)
+  ImageProcessor.swift  사용자 이미지 다듬기 (프레임 읽기·흰 배경 제거·여백 자르기·크기 맞춤)
+  SettingsView.swift    이미지 바꾸기 설정 창
 Resources/
   icon_{on,q,off}_N(_dark)(@2x).png  메뉴바 프레임 (18pt, _dark는 테두리 버전)
   scene_{on,q,off}.png               팝오버 일러스트

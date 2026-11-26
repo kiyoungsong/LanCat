@@ -13,6 +13,8 @@ private enum Palette {
 
 struct PopoverView: View {
     @ObservedObject var monitor: NetworkMonitor
+    @ObservedObject var store: ThemeStore
+    var openSettings: () -> Void = {}
 
     private var accent: Color {
         switch monitor.state {
@@ -89,8 +91,14 @@ struct PopoverView: View {
     }
 
     private var scene: some View {
-        AnimatedScene(state: monitor.state, imageName: sceneName, openTick: monitor.popoverOpenTick)
-            .id(sceneName)
+        let slot = ThemeSlot.scene(for: monitor.state)
+        return AnimatedScene(
+            state: monitor.state,
+            frames: store.frames(for: slot),
+            showEffects: !store.isCustom(slot),
+            openTick: monitor.popoverOpenTick
+        )
+        .id("\(sceneName)-\(store.revision)")
             .transition(.opacity)
     }
 
@@ -158,6 +166,11 @@ struct PopoverView: View {
             }
             Spacer()
             Button {
+                openSettings()
+            } label: {
+                Label("이미지 바꾸기", systemImage: "paintbrush")
+            }
+            Button {
                 monitor.refreshNow()
             } label: {
                 Label("새로고침", systemImage: "arrow.clockwise")
@@ -172,7 +185,9 @@ struct PopoverView: View {
 /// 팝오버 일러스트: 열릴 때 톡 튀어나오고, 상태별로 계속 살짝 움직여요.
 private struct AnimatedScene: View {
     let state: LinkState
-    let imageName: String
+    let frames: Frames
+    /// 기본 그림일 때만 z, 물음표, 반짝이 효과를 얹어요 (사용자 그림엔 위치가 안 맞을 수 있어서)
+    let showEffects: Bool
     let openTick: Int
     @State private var appeared = false
 
@@ -195,10 +210,12 @@ private struct AnimatedScene: View {
 
                 illustration(t)
 
-                switch state {
-                case .unplugged: sleepingZs(t)
-                case .noInternet: questionMark(t)
-                case .connected: sparkles(t)
+                if showEffects {
+                    switch state {
+                    case .unplugged: sleepingZs(t)
+                    case .noInternet: questionMark(t)
+                    case .connected: sparkles(t)
+                    }
                 }
             }
             .frame(width: size.width, height: size.height)
@@ -221,7 +238,7 @@ private struct AnimatedScene: View {
 
     @ViewBuilder
     private func illustration(_ t: TimeInterval) -> some View {
-        if let img = Bundle.main.image(forResource: imageName) {
+        if let img = frames.image(at: Date(timeIntervalSinceReferenceDate: t)) {
             let base = Image(nsImage: img)
                 .resizable()
                 .interpolation(.high)

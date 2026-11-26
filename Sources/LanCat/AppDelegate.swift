@@ -6,6 +6,8 @@ import UserNotifications
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let monitor = NetworkMonitor()
+    let store = ThemeStore.shared
+    private var settingsWindow: NSWindow?
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var cancellables = Set<AnyCancellable>()
@@ -28,12 +30,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.appearance = NSAppearance(named: .darkAqua)
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        popover.contentViewController = NSHostingController(rootView: PopoverView(
+            monitor: monitor,
+            store: store,
+            openSettings: { [weak self] in self?.openSettings() }
+        ))
 
         monitor.$state
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.applyAnimation(for: $0) }
+            .store(in: &cancellables)
+
+        // 설정에서 이미지를 바꾸면 메뉴바 아이콘도 바로 바뀌게
+        store.$revision
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.applyAnimation(for: self.monitor.state)
+            }
             .store(in: &cancellables)
 
         monitor.onStateChange = { [weak self] old, new in
@@ -47,31 +63,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 메뉴바 애니메이션
 
-    private var iconOutline: Bool {
-        get { UserDefaults.standard.bool(forKey: "iconOutline") }
-        set { UserDefaults.standard.set(newValue, forKey: "iconOutline") }
-    }
-
-    private func image(_ name: String) -> NSImage? {
-        let file = iconOutline ? name + "_dark" : name
-        guard let img = Bundle.main.image(forResource: file) else { return nil }
-        img.isTemplate = false
-        let ratio = img.size.width / max(img.size.height, 1)
-        img.size = NSSize(width: 18 * ratio, height: 18)
-        return img
-    }
-
     private func applyAnimation(for state: LinkState) {
-        let frames: [(String, TimeInterval)]
-        switch state {
-        case .connected:
-            frames = [("icon_on_0", 3.2), ("icon_on_1", 0.16), ("icon_on_0", 0.25), ("icon_on_1", 0.14)]
-        case .noInternet:
-            frames = [("icon_q_0", 1.6), ("icon_q_1", 0.18)]
-        case .unplugged:
-            frames = [("icon_off_0", 0.7), ("icon_off_1", 0.7), ("icon_off_2", 1.1)]
-        }
-        sequence = frames.compactMap { name, dur in image(name).map { ($0, dur) } }
+        let frames = store.frames(for: ThemeSlot.icon(for: state))
+        sequence = Array(zip(frames.images, frames.durations))
         frameIndex = 0
         let tip: String
         switch state {
@@ -127,8 +121,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let outline = NSMenuItem(title: "아이콘 테두리", action: #selector(toggleOutline), keyEquivalent: "")
         outline.target = self
-        outline.state = iconOutline ? .on : .off
+        outline.state = store.iconOutline ? .on : .off
         menu.addItem(outline)
+
+        let settings = NSMenuItem(title: "이미지 바꾸기…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
 
         // 테스트용 상태 미리보기
         let simItem = NSMenuItem(title: "상태 미리보기 (테스트)", action: nil, keyEquivalent: "")
@@ -157,8 +155,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleOutline() {
-        iconOutline.toggle()
-        applyAnimation(for: monitor.state)
+        store.iconOutline.toggle()
+    }
+
+    @objc func openSettings() {
+        popover.performClose(nil)
+        if settingsWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 660, height: 640),
+                styleMask: [.titled, .closable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "LanCat 설정"
+            window.isReleasedWhenClosed = false
+            window.contentViewController = NSHostingController(rootView: SettingsView(store: store))
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     @objc private func simulate(_ sender: NSMenuItem) {
