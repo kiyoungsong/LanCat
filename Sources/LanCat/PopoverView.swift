@@ -15,6 +15,7 @@ struct PopoverView: View {
     @ObservedObject var monitor: NetworkMonitor
     @ObservedObject var store: ThemeStore
     var openSettings: () -> Void = {}
+    @ObservedObject var updater = UpdateChecker.shared
 
     private var accent: Color {
         switch monitor.state {
@@ -26,25 +27,25 @@ struct PopoverView: View {
 
     private var pillText: String {
         switch monitor.state {
-        case .connected: "유선랜 온라인"
-        case .noInternet: "인터넷 연결 끊김"
-        case .unplugged: "랜선 빠짐"
+        case .connected: L("popover.pill.connected")
+        case .noInternet: L("popover.pill.noInternet")
+        case .unplugged: L("popover.pill.unplugged")
         }
     }
 
     private var title: String {
         switch monitor.state {
-        case .connected: "연결 잘 되고 있어요"
-        case .noInternet: "인터넷이 안 돼요"
-        case .unplugged: "랜선이 빠졌어요"
+        case .connected: L("popover.title.connected")
+        case .noInternet: L("popover.title.noInternet")
+        case .unplugged: L("popover.title.unplugged")
         }
     }
 
     private var subtitle: String {
         switch monitor.state {
-        case .connected: "고양이가 공유기를 지키는 중"
-        case .noInternet: "케이블은 꽂혀 있는데 인터넷에 닿지 않아요"
-        case .unplugged: "케이블을 꽂으면 고양이가 일어나요"
+        case .connected: L("popover.subtitle.connected")
+        case .noInternet: L("popover.subtitle.noInternet")
+        case .unplugged: L("popover.subtitle.unplugged")
         }
     }
 
@@ -62,6 +63,19 @@ struct PopoverView: View {
             HStack(alignment: .center, spacing: 14) {
                 scene
                 info
+            }
+            if updater.updateAvailable, let latest = updater.latestVersion {
+                Button {
+                    updater.openReleasePage()
+                } label: {
+                    Label(L("popover.updateBanner", latest), systemImage: "arrow.down.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.green)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(Palette.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
             }
             footer
         }
@@ -115,13 +129,13 @@ struct PopoverView: View {
             }
 
             VStack(spacing: 0) {
-                row("인터페이스", monitor.interfaceName ?? "—")
+                row(L("popover.interface"), monitor.interfaceName ?? "—")
                 divider
-                row("속도", monitor.linkSpeed ?? "—")
+                row(L("popover.speed"), monitor.linkSpeed ?? "—")
                 divider
                 row("IP", monitor.ipv4 ?? "—")
                 divider
-                row("게이트웨이", monitor.router ?? "—")
+                row(L("popover.gateway"), monitor.router ?? "—")
                 divider
                 row("DNS", monitor.dns.isEmpty ? "—" : monitor.dns.prefix(2).joined(separator: "\n"))
             }
@@ -129,7 +143,7 @@ struct PopoverView: View {
             .background(Palette.card, in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.stroke, lineWidth: 0.5))
 
-            Text("마지막 변경 \(monitor.lastChange, style: .relative) 전")
+            (Text(L("popover.lastChange.prefix")) + Text(monitor.lastChange, style: .relative) + Text(L("popover.lastChange.suffix")))
                 .font(.system(size: 11))
                 .foregroundStyle(Palette.secondary)
         }
@@ -162,20 +176,20 @@ struct PopoverView: View {
                     NSWorkspace.shared.open(url)
                 }
             } label: {
-                Label("네트워크 설정 열기", systemImage: "arrow.up.right.square")
+                Label(L("popover.networkSettings"), systemImage: "arrow.up.right.square")
             }
             Spacer()
             Button {
                 openSettings()
             } label: {
-                Label("이미지 바꾸기", systemImage: "paintbrush")
+                Label(L("popover.settings"), systemImage: "gearshape")
             }
             Button {
                 monitor.refreshNow()
             } label: {
-                Label("새로고침", systemImage: "arrow.clockwise")
+                Label(L("popover.refresh"), systemImage: "arrow.clockwise")
             }
-            Button("종료") { NSApp.terminate(nil) }
+            Button(L("popover.quit")) { NSApp.terminate(nil) }
         }
         .buttonStyle(.bordered)
         .controlSize(.regular)

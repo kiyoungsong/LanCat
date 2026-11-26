@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -29,50 +30,89 @@ struct FramePlayer: View {
 
 struct SettingsView: View {
     @ObservedObject var store: ThemeStore
+    @State private var tab = 0
+
+    var body: some View {
+        TabView(selection: $tab) {
+            GeneralTab(store: store)
+                .tabItem { Label(L("settings.section.general"), systemImage: "gearshape") }
+                .tag(0)
+            AppearanceTab(store: store)
+                .tabItem { Label(L("settings.title"), systemImage: "paintpalette") }
+                .tag(1)
+        }
+        .padding(16)
+        .frame(width: 640, height: 500)
+    }
+}
+
+/// 일반 탭: 언어, 로그인 시 자동 실행, 아이콘 테두리
+private struct GeneralTab: View {
+    @ObservedObject var store: ThemeStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LanguageRow()
+            LaunchAtLoginToggle()
+            Toggle(L("settings.outline"), isOn: $store.iconOutline)
+
+            Divider().padding(.vertical, 4)
+
+            UpdateSection()
+            Spacer()
+            HStack {
+                Spacer()
+                Text("LanCat \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// 꾸미기 탭: 상태를 하나 고르면 그 상태의 메뉴바 아이콘과 팝오버 그림을 나란히 보여줘요
+private struct AppearanceTab: View {
+    @ObservedObject var store: ThemeStore
+    @State private var state: LinkState = .connected
 
     private let states: [LinkState] = [.connected, .noInternet, .unplugged]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("이미지 바꾸기")
-                    .font(.title2.bold())
-                Text("칸에 이미지를 끌어다 놓거나 '선택…'을 눌러 바꿀 수 있어요. PNG, JPG, GIF(움직이는 이미지)를 넣을 수 있고, 여백은 자동으로 잘라내요.")
-                    .font(.callout)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(L("settings.description"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("", selection: $state) {
+                ForEach(states, id: \.self) { s in
+                    Text(label(s)).tag(s)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("settings.menubarIcon")).font(.headline)
+                    SlotCell(store: store, slot: ThemeSlot.icon(for: state))
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("settings.popoverImage")).font(.headline)
+                    SlotCell(store: store, slot: ThemeSlot.scene(for: state))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(L("settings.removeWhite"), isOn: $store.removeWhiteBackground)
+                Toggle(L("settings.trim"), isOn: $store.trimMargins)
+                Text(L("settings.trimHint"))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+                    .padding(.leading, 20)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Grid(alignment: .topLeading, horizontalSpacing: 16, verticalSpacing: 16) {
-                GridRow {
-                    Color.clear.frame(width: 84, height: 1)
-                    Text("메뉴바 아이콘").font(.headline)
-                    Text("팝오버 그림").font(.headline)
-                }
-                ForEach(states, id: \.self) { state in
-                    GridRow {
-                        Text(label(state))
-                            .font(.headline)
-                            .frame(width: 84, alignment: .leading)
-                            .padding(.top, 8)
-                        SlotCell(store: store, slot: ThemeSlot.icon(for: state))
-                        SlotCell(store: store, slot: ThemeSlot.scene(for: state))
-                    }
-                }
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("새로 넣는 이미지의 흰 배경 자동으로 지우기", isOn: $store.removeWhiteBackground)
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle("새로 넣는 이미지의 여백 자동으로 잘라내기", isOn: $store.trimMargins)
-                    Text("같은 크기 캔버스로 만든 아이콘 세트라면 끄는 게 좋아요. 세 아이콘의 크기와 위치가 서로 맞게 유지돼요.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 20)
-                }
-                Toggle("기본 아이콘에 테두리 넣기 (다크 메뉴바에서 더 잘 보여요)", isOn: $store.iconOutline)
             }
 
             if let error = store.importError {
@@ -81,21 +121,23 @@ struct SettingsView: View {
                     .font(.callout)
             }
 
+            Spacer(minLength: 0)
+
             HStack {
-                Button("이미지 폴더 열기") { store.openFolder() }
+                Button(L("settings.openFolder")) { store.openFolder() }
                 Spacer()
-                Button("모두 기본값으로") { store.resetAll() }
+                Button(L("settings.resetAll")) { store.resetAll() }
             }
         }
-        .padding(24)
-        .frame(width: 660)
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func label(_ state: LinkState) -> String {
         switch state {
-        case .connected: return "연결됨"
-        case .noInternet: return "인터넷 없음"
-        case .unplugged: return "랜선 빠짐"
+        case .connected: return L("state.connected")
+        case .noInternet: return L("state.noInternet")
+        case .unplugged: return L("state.unplugged")
         }
     }
 }
@@ -105,8 +147,8 @@ private struct SlotCell: View {
     let slot: ThemeSlot
     @State private var dropTargeted = false
 
-    private var cellWidth: CGFloat { slot.kind == .icon ? 220 : 260 }
-    private var cellHeight: CGFloat { slot.kind == .icon ? 96 : 170 }
+    private var cellWidth: CGFloat { slot.kind == .icon ? 240 : 300 }
+    private var cellHeight: CGFloat { 170 }
 
     var body: some View {
         let frames = store.frames(for: slot)
@@ -143,12 +185,12 @@ private struct SlotCell: View {
             }
 
             HStack(spacing: 8) {
-                Button("선택…") { pickFile() }
+                Button(L("settings.choose")) { pickFile() }
                 if custom {
-                    Button("기본값") { store.reset(slot) }
+                    Button(L("settings.default")) { store.reset(slot) }
                 }
                 Spacer()
-                Text(custom ? (frames.isAnimated ? "내 이미지 · 움직임" : "내 이미지") : "기본")
+                Text(custom ? (frames.isAnimated ? L("settings.badge.customAnimated") : L("settings.badge.custom")) : L("settings.badge.default"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -180,10 +222,96 @@ private struct SlotCell: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .gif, .heic, .webP, .tiff, .bmp]
         panel.allowsMultipleSelection = false
-        panel.message = "바꿀 이미지를 골라 주세요"
+        panel.message = L("settings.panelMessage")
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url {
             store.importImage(from: url, into: slot)
+        }
+    }
+}
+
+/// 언어 선택 (바꾸면 재시작 안내)
+private struct LanguageRow: View {
+    @State private var selection: String = AppLanguage.override ?? "system"
+    @State private var changed = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Picker(L("settings.language"), selection: $selection) {
+                Text(L("settings.language.system")).tag("system")
+                Divider()
+                ForEach(AppLanguage.supported) { lang in
+                    Text(lang.name).tag(lang.code)
+                }
+            }
+            .frame(width: 280)
+            .onChange(of: selection) { value in
+                AppLanguage.override = value == "system" ? nil : value
+                changed = true
+            }
+
+            if changed {
+                Text(L("settings.language.restart"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button(L("settings.language.restartButton")) { AppLanguage.relaunch() }
+            }
+            Spacer()
+        }
+    }
+}
+
+/// 로그인 시 자동 실행
+private struct LaunchAtLoginToggle: View {
+    @State private var enabled = SMAppService.mainApp.status == .enabled
+
+    var body: some View {
+        Toggle(L("menu.launchAtLogin"), isOn: $enabled)
+            .onChange(of: enabled) { value in
+                do {
+                    if value {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                } catch {
+                    NSSound.beep()
+                }
+            }
+    }
+}
+
+/// 업데이트 확인
+private struct UpdateSection: View {
+    @ObservedObject var updater = UpdateChecker.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("update.section")).font(.headline)
+            Toggle(L("update.autoCheck"), isOn: $updater.autoCheck)
+            HStack(spacing: 10) {
+                Button(L("update.checkNow")) { updater.check() }
+                    .disabled(updater.status == .checking)
+                statusView
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch updater.status {
+        case .idle:
+            EmptyView()
+        case .checking:
+            ProgressView().controlSize(.small)
+            Text(L("update.checking")).font(.callout).foregroundStyle(.secondary)
+        case .upToDate:
+            Text(L("update.upToDate", updater.currentVersion)).font(.callout).foregroundStyle(.secondary)
+        case .available:
+            Text(L("update.available", updater.latestVersion ?? "")).font(.callout).foregroundStyle(.green)
+            Button(L("update.open")) { updater.openReleasePage() }
+        case .failed:
+            Text(L("update.failed")).font(.callout).foregroundStyle(.orange)
         }
     }
 }

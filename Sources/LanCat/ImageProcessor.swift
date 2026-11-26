@@ -19,10 +19,10 @@ enum ImageProcessor {
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
 
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
-            return .failure(ImportError("이미지를 열 수 없어요. PNG, JPG, GIF 파일인지 확인해 주세요."))
+            return .failure(ImportError(L("error.open")))
         }
         let count = min(CGImageSourceGetCount(source), maxFrames)
-        guard count > 0 else { return .failure(ImportError("이미지에 프레임이 없어요.")) }
+        guard count > 0 else { return .failure(ImportError(L("error.noFrames"))) }
 
         var bitmaps: [RGBABitmap] = []
         var durations: [Double] = []
@@ -33,7 +33,7 @@ enum ImageProcessor {
             bitmaps.append(bitmap)
             durations.append(frameDelay(source, index: i))
         }
-        guard !bitmaps.isEmpty else { return .failure(ImportError("이미지를 읽지 못했어요.")) }
+        guard !bitmaps.isEmpty else { return .failure(ImportError(L("error.read"))) }
 
         // 모든 프레임의 내용 영역을 합쳐서 잘라야 움직여도 위치가 흔들리지 않아요.
         // 여백 자르기를 끄면 원본 캔버스를 그대로 써요 (같은 캔버스로 만든 아이콘 세트의 크기가 서로 맞게).
@@ -46,7 +46,7 @@ enum ImageProcessor {
             box = CGRect(x: 0, y: 0, width: first.width, height: first.height)
         }
         guard let crop = box else {
-            return .failure(ImportError("이미지가 전부 투명해요. '흰 배경 지우기'를 끄고 다시 넣어 보세요."))
+            return .failure(ImportError(L("error.allTransparent")))
         }
 
         let target: CGSize
@@ -62,7 +62,7 @@ enum ImageProcessor {
                   let resized = resize(cropped, to: target) else { continue }
             output.append(resized)
         }
-        guard !output.isEmpty else { return .failure(ImportError("이미지를 다듬지 못했어요.")) }
+        guard !output.isEmpty else { return .failure(ImportError(L("error.process"))) }
         if output.count == 1 { durations = [1] }
         return .success(ProcessedFrames(images: output, durations: Array(durations.prefix(output.count))))
     }

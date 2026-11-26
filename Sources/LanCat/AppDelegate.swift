@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         monitor.start()
+        UpdateChecker.shared.start()
         applyAnimation(for: monitor.state)
     }
 
@@ -69,9 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         frameIndex = 0
         let tip: String
         switch state {
-        case .connected: tip = "LanCat · 유선랜 연결됨"
-        case .noInternet: tip = "LanCat · 인터넷 연결 끊김"
-        case .unplugged: tip = "LanCat · 랜선 빠짐"
+        case .connected: tip = L("tooltip.connected")
+        case .noInternet: tip = L("tooltip.noInternet")
+        case .unplugged: tip = L("tooltip.unplugged")
         }
         statusItem.button?.toolTip = tip
         showFrame()
@@ -114,28 +115,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showContextMenu() {
         let menu = NSMenu()
-        let login = NSMenuItem(title: "로그인 시 자동 실행", action: #selector(toggleLoginItem), keyEquivalent: "")
-        login.target = self
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
-
-        let outline = NSMenuItem(title: "아이콘 테두리", action: #selector(toggleOutline), keyEquivalent: "")
-        outline.target = self
-        outline.state = store.iconOutline ? .on : .off
-        menu.addItem(outline)
-
-        let settings = NSMenuItem(title: "이미지 바꾸기…", action: #selector(openSettings), keyEquivalent: ",")
+        let settings = NSMenuItem(title: L("menu.settings"), action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
+        menu.addItem(.separator())
 
         // 테스트용 상태 미리보기
-        let simItem = NSMenuItem(title: "상태 미리보기 (테스트)", action: nil, keyEquivalent: "")
+        let simItem = NSMenuItem(title: L("menu.preview"), action: nil, keyEquivalent: "")
         let sub = NSMenu()
         let options: [(String, LinkState?)] = [
-            ("실제 상태 따르기", nil),
-            ("연결됨", .connected),
-            ("인터넷 없음", .noInternet),
-            ("랜선 빠짐", .unplugged),
+            (L("menu.preview.real"), nil),
+            (L("state.connected"), .connected),
+            (L("state.noInternet"), .noInternet),
+            (L("state.unplugged"), .unplugged),
         ]
         for (i, (title, value)) in options.enumerated() {
             let item = NSMenuItem(title: title, action: #selector(simulate(_:)), keyEquivalent: "")
@@ -148,14 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         simItem.submenu = sub
         menu.addItem(simItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "LanCat 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
-    }
-
-    @objc private func toggleOutline() {
-        store.iconOutline.toggle()
     }
 
     @objc func openSettings() {
@@ -167,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "LanCat 설정"
+            window.title = L("settings.windowTitle")
             window.isReleasedWhenClosed = false
             window.contentViewController = NSHostingController(rootView: SettingsView(store: store))
             window.center()
@@ -182,18 +170,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.simulatedState = states[sender.tag]
     }
 
-    @objc private func toggleLoginItem() {
-        do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-            } else {
-                try SMAppService.mainApp.register()
-            }
-        } catch {
-            NSSound.beep()
-        }
-    }
-
     // MARK: - 알림
 
     private func notify(from old: LinkState, to new: LinkState) {
@@ -202,15 +178,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let content = UNMutableNotificationContent()
         switch new {
         case .unplugged:
-            content.title = "랜선이 빠졌어요"
-            content.body = "고양이가 잠들었어요. 케이블을 확인해 주세요."
+            content.title = L("notif.unplugged.title")
+            content.body = L("notif.unplugged.body")
         case .noInternet:
-            content.title = "인터넷 연결이 끊겼어요"
-            content.body = "랜선은 꽂혀 있는데 인터넷에 닿지 않아요."
+            content.title = L("notif.noInternet.title")
+            content.body = L("notif.noInternet.body")
         case .connected:
             guard old != .connected else { return }
-            content.title = "유선랜 다시 연결됨"
-            content.body = "고양이가 일어났어요."
+            content.title = L("notif.connected.title")
+            content.body = L("notif.connected.body")
         }
         let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req)

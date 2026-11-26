@@ -181,7 +181,7 @@ final class ThemeStore: ObservableObject {
                     do {
                         try self.save(processed, into: slot)
                     } catch {
-                        self.importError = "저장하지 못했어요: \(error.localizedDescription)"
+                        self.importError = L("error.save", error.localizedDescription)
                     }
                     self.cache[slot] = nil
                     self.revision += 1
@@ -197,7 +197,7 @@ final class ThemeStore: ObservableObject {
         for (i, cg) in processed.images.enumerated() {
             let rep = NSBitmapImageRep(cgImage: cg)
             guard let data = rep.representation(using: .png, properties: [:]) else {
-                throw ImportError("PNG로 저장하지 못했어요.")
+                throw ImportError(L("error.png"))
             }
             try data.write(to: dir.appendingPathComponent("\(i).png"))
         }

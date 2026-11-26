@@ -1,78 +1,114 @@
+<div align="center">
+
 # LanCat 🐈‍⬛
 
-맥북 메뉴바에 사는 이더넷(유선랜) 상태 고양이.
-시스템 설정에 들어가지 않아도, 와이파이 아이콘처럼 메뉴바에서 유선랜 상태를 바로 확인할 수 있어요.
+**A cute cat that lives in your macOS menu bar and shows your Ethernet status at a glance.**
 
-| 상태 | 메뉴바 고양이 | 의미 |
+English · [한국어](README.ko.md)
+
+<img src="docs/menubar-demo.gif" alt="LanCat menu bar demo" width="560">
+
+</div>
+
+macOS shows a Wi-Fi icon in the menu bar, but nothing for wired Ethernet.
+LanCat fills that gap with a small cat that reacts to your connection.
+
+| State | Menu bar cat | Meaning |
 |---|---|---|
-| 연결됨 | 초록 눈 + 체크, 가끔 눈 깜빡 | 랜선 연결 + 인터넷 OK |
-| 인터넷 없음 | 주황 눈 + 와이파이 X | 랜선은 꽂혔는데 인터넷이 안 됨 |
-| 랜선 빠짐 | 공유기 위에서 쿨쿨, z가 하나씩 | 이더넷 링크 없음 |
+| **Connected** | Green eyes + check, blinks now and then | Ethernet linked and the internet is reachable |
+| **No Internet** | Orange eyes + Wi-Fi ✕ | Cable is plugged in, but the internet can't be reached |
+| **Unplugged** | Sleeping on the router, z… z… | No Ethernet link |
 
-## 기능
+<p align="center"><img src="docs/popover-scenes.png" alt="Popover illustrations" width="720"></p>
 
-- 이더넷 연결 상태를 실시간 감지 (와이파이가 켜져 있어도 유선 기준으로 판단)
-- 이더넷 경로로만 인터넷 연결 확인 (15초 간격)
-- 왼쪽 클릭: 상세 팝오버 (인터페이스, 링크 속도, IP, 게이트웨이, DNS)
-- 오른쪽 클릭: 로그인 시 자동 실행 / 아이콘 테두리 / 이미지 바꾸기 / 상태 미리보기(테스트) / 종료
-- **이미지 바꾸기**: 상태별 메뉴바 아이콘과 팝오버 그림을 내 이미지로 교체 (PNG·JPG·GIF·APNG·WebP)
-  - 움직이는 GIF를 넣으면 메뉴바 아이콘도 그대로 움직여요
-  - 여백 자동 자르기, 흰 배경 자동 지우기, 메뉴바 크기 자동 맞춤
-  - 저장 위치: `~/Library/Application Support/LanCat/Custom/`
-- 상태가 바뀌면 macOS 알림
-- Dock 아이콘 없이 메뉴바에만 상주, 메모리 20~30MB 수준
+## Features
 
-## 설치
+- Real-time Ethernet link detection (judged by the wired connection even when Wi-Fi is on)
+- Internet check over the Ethernet interface only (every 15 seconds)
+- Click the cat for details: interface, link speed, IP, gateway, DNS
+- Notifications when the state changes
+- **Customize**: replace the menu bar icon and popover image for each state with your own (PNG, JPG, GIF, APNG, WebP)
+  - Animated GIFs animate in the menu bar too
+  - Automatic margin trimming, white background removal and menu bar sizing
+- Launch at login, update notifications
+- Languages: English, 한국어, 日本語, 简体中文
+- Menu bar only (no Dock icon), uses about 20–30 MB of memory
 
-### Releases에서 받기
+## Install
 
-1. [Releases](../../releases)에서 최신 `LanCat.dmg`를 받아요
-2. `LanCat.app`을 `응용 프로그램(Applications)` 폴더로 끌어다 놓아요
-3. 처음 실행 시 "확인되지 않은 개발자" 경고가 뜨면 터미널에서 아래를 한 번 실행해요
+1. Download the latest `LanCat.dmg` from [Releases](https://github.com/kiyoungsong/LanCat/releases/latest)
+2. Drag `LanCat.app` into your Applications folder
+3. LanCat isn't signed with an Apple Developer ID, so macOS may block the first launch. Run this once in Terminal:
 
    ```bash
    xattr -cr /Applications/LanCat.app
    ```
 
-   또는 **시스템 설정 → 개인정보 보호 및 보안**에서 "그래도 열기"를 눌러요.
-   (개인 프로젝트라 Apple 개발자 서명을 하지 않았어요.)
+   Or open **System Settings → Privacy & Security** and click **Open Anyway**.
 
-### 직접 빌드
+Requires macOS 13 Ventura or later (Apple Silicon and Intel).
 
-Xcode 또는 Command Line Tools(`xcode-select --install`), macOS 13 이상이 필요해요.
+## Usage
+
+- **Left click**: details popover
+- **Right click**: Settings… (⌘,) / Preview State (Test) / Quit
+- **Settings → Appearance**: pick a state, then drag an image onto the slot. Try the samples in [`test-images/`](test-images)
+
+## Build from source
+
+Requires Xcode or the Command Line Tools (`xcode-select --install`).
 
 ```bash
-git clone <이 저장소 주소>
-cd lancat
-./build.sh --run
+git clone https://github.com/kiyoungsong/LanCat.git
+cd LanCat
+./build.sh --run          # build and launch build/LanCat.app
+./build.sh --dmg          # also create build/LanCat.dmg
+UNIVERSAL=1 ./build.sh    # Apple Silicon + Intel (needs Xcode)
 ```
 
-결과물은 `build/LanCat.app`이에요.
+### Testing "No Internet"
 
-## 구조
+Right click → **Preview State** switches the UI without touching your network.
+To reproduce it for real while the cable stays plugged in:
+
+```bash
+sudo route add -host 1.1.1.1 127.0.0.1     # block the check
+sudo route delete -host 1.1.1.1            # restore
+```
+
+## Project structure
 
 ```
 Sources/LanCat/
-  main.swift            앱 진입점 (메뉴바 전용 앱)
-  AppDelegate.swift     메뉴바 아이콘·프레임 애니메이션·팝오버·알림·메뉴
-  NetworkMonitor.swift  NWPathMonitor로 이더넷 감지 + 이더넷 경로로 인터넷 확인
-  PopoverView.swift     SwiftUI 팝오버 + 상태별 애니메이션
-  ThemeStore.swift      기본/사용자 이미지 관리 (상태별 6칸)
-  ImageProcessor.swift  사용자 이미지 다듬기 (프레임 읽기·흰 배경 제거·여백 자르기·크기 맞춤)
-  SettingsView.swift    이미지 바꾸기 설정 창
+  main.swift            App entry (menu bar only)
+  AppDelegate.swift     Menu bar icon animation, popover, menu, notifications
+  NetworkMonitor.swift  Ethernet detection (NWPathMonitor) + internet check over Ethernet
+  PopoverView.swift     SwiftUI popover with per-state animations
+  SettingsView.swift    Settings window (General / Appearance)
+  ThemeStore.swift      Default and custom images for the 6 slots
+  ImageProcessor.swift  Frame decoding, white background removal, trimming, resizing
+  UpdateChecker.swift   Checks GitHub Releases for a newer version
+  Localization.swift    L("key") helper and app language override
 Resources/
-  icon_{on,q,off}_N(_dark)(@2x).png  메뉴바 프레임 (18pt, _dark는 테두리 버전)
-  scene_{on,q,off}.png               팝오버 일러스트
-  AppIcon.png
-design/                              원본 일러스트
+  icon_*.png, scene_*.png, AppIcon.png
+  {en,ko,ja,zh-Hans}.lproj/Localizable.strings
+design/                 Original artwork
+test-images/            Sample images for the Appearance settings
 ```
 
-## 테스트 팁
+## Releasing
 
-- 오른쪽 클릭 → **상태 미리보기**로 세 가지 상태 화면을 바로 볼 수 있어요
-- 실제 "인터넷 없음" 재현:
+Push a version tag and GitHub Actions builds a universal app and attaches `LanCat.dmg` to the release.
 
-  ```bash
-  sudo route add -host 1.1.1.1 127.0.0.1     # 막기
-  sudo route delete -host 1.1.1.1            # 되돌리기
-  ```
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+## Contributing translations
+
+Copy `Resources/en.lproj/Localizable.strings` into a new `<language>.lproj` folder, translate the values, and add the language code to `CFBundleLocalizations` in `build.sh`. Pull requests are welcome!
+
+## License
+
+[MIT](LICENSE) © 2026 Kiyoung Song

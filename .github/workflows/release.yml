@@ -1,0 +1,57 @@
+name: Release
+
+# v1.0.0 같은 태그를 푸시하면 유니버설 앱을 빌드해서 GitHub Releases에 DMG를 올려요.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build DMG
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then VERSION="0.0.0-dev"; fi
+          chmod +x build.sh
+          VERSION="$VERSION" BUILD_NUMBER="${GITHUB_RUN_NUMBER}" UNIVERSAL=1 ./build.sh --dmg
+          cd build && ditto -c -k --keepParent LanCat.app LanCat.zip
+          lipo -info LanCat.app/Contents/MacOS/LanCat
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanCat
+          path: |
+            build/LanCat.dmg
+            build/LanCat.zip
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/LanCat.dmg
+            build/LanCat.zip
+          generate_release_notes: true
+          body: |
+            ## 설치 / Install
+            1. `LanCat.dmg`를 받아서 `LanCat.app`을 Applications 폴더로 끌어다 놓아요.
+               Download `LanCat.dmg` and drag `LanCat.app` into Applications.
+            2. 처음 실행할 때 "확인되지 않은 개발자" 경고가 뜨면 / If macOS blocks the first launch:
+               ```bash
+               xattr -cr /Applications/LanCat.app
+               ```
