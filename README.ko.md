@@ -19,7 +19,7 @@ LanCat은 그 자리를 연결 상태에 따라 반응하는 작은 고양이로
 | **인터넷 없음** | 주황 눈 + 와이파이 ✕ | 랜선은 꽂혔는데 인터넷이 안 됨 |
 | **랜선 빠짐** | 공유기 위에서 쿨쿨, z가 하나씩 | 이더넷 링크 없음 |
 
-<p align="center"><img src="docs/popover-scenes.png" alt="팝오버 일러스트" width="720"></p>
+<p align="center"><img src="docs/popover-demo.gif" alt="팝오버 애니메이션" width="720"></p>
 
 ## 기능
 

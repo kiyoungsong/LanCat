@@ -19,7 +19,7 @@ LanCat fills that gap with a small cat that reacts to your connection.
 | **No Internet** | Orange eyes + Wi-Fi ✕ | Cable is plugged in, but the internet can't be reached |
 | **Unplugged** | Sleeping on the router, z… z… | No Ethernet link |
 
-<p align="center"><img src="docs/popover-scenes.png" alt="Popover illustrations" width="720"></p>
+<p align="center"><img src="docs/popover-demo.gif" alt="Popover animations" width="720"></p>
 
 ## Features
 
